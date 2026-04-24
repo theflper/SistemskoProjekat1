@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ExcelDataReader;
 
 namespace SistemskoProjekat1
 {
@@ -115,6 +116,8 @@ namespace SistemskoProjekat1
         public void Stop()//pri gasenju servera postavljamo isRunning na false da bi radne niti znale da treba da zavrse petlju i da se ugase
         {
             isRunning = false;
+            //provera da ne dodje do greske za svaki slucaj
+            if (queueLock == null) queueLock = new Object();
             lock (queueLock)
             {
                 Monitor.PulseAll(queueLock); // Budi SVE niti da provere isRunning i završe petlju
@@ -151,6 +154,8 @@ namespace SistemskoProjekat1
                 Request req;
                 //zakljucavamo pristup redu zahteva da bi obradili samo jedan zahtev u jednom trenutku
                 //i da ne bi doslo do race condition-a
+                //provera da ne dodje do greske za svaki slucaj
+                if (queueLock == null) queueLock = new Object();
                 lock (queueLock)
                 {
                     //ako nema zahteva, radna nit ce cekati dok ne stigne novi zahtev i ne bude obavestena da je stigao

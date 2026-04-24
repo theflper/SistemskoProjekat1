@@ -3,15 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ExcelDataReader;
 
 namespace SistemskoProjekat1
 {
     internal class LRUCache
     {
+        //kapacitet cache-a
         private readonly int capacity;
+        //pamtimo ime fajla kao key i value koji je byte[] je fajl
         private readonly Dictionary<string, LinkedListNode<(string key, byte[] value)>> map;
+        //lancana lista ko je zadnji koriscen onaj ko je na kraju je prvi koriscen
+        //na pocetku je ko je najskorije koriscen
         private readonly LinkedList<(string key, byte[] value)> lruList;
+        //objekat za pristup kesu posto je deljeni resurs
         private object lockObj = new object();
+        //konstruktor cache-a
         public LRUCache(int capacity)
         {
             this.capacity = capacity;
@@ -20,6 +27,7 @@ namespace SistemskoProjekat1
         }
         public byte[] Get(string key)
         {
+            //provera da ne dodje do greske za svaki slucaj
             if (lockObj == null)
                 lockObj = new object();
             lock (lockObj)
@@ -34,6 +42,7 @@ namespace SistemskoProjekat1
         }
         public void Put(string key, byte[] value)
         {
+            //provera da ne dodje do greske za svaki slucaj
             if (lockObj == null)
                 lockObj = new object();
             lock (lockObj)

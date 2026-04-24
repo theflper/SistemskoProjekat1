@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ExcelDataReader;
 
 namespace SistemskoProjekat1
 {
@@ -22,6 +23,7 @@ namespace SistemskoProjekat1
         public bool WaitOrTake(string key)
         {
             Entry entry;
+            //provera da ne dodje do greske za svaki slucaj
             if (globalLock == null) globalLock = new Object();
             lock (globalLock)
             {
@@ -50,6 +52,7 @@ namespace SistemskoProjekat1
         public void Done(string key)
         {
             Entry entry;
+            //provera da ne dodje do greske za svaki slucaj
             if (globalLock == null) globalLock = new Object();
             lock (globalLock)
             {
