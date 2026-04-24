@@ -9,6 +9,7 @@ namespace SistemskoProjekat1
 {
     internal class ProcessingTracker
     {
+        //objekat za zakljucavanje koji ce nam pomoci da sinhronizujemo pristup map-i
         private class Entry
         {
             public bool IsProcessing = true;
