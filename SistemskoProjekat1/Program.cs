@@ -11,6 +11,7 @@ namespace SistemskoProjekat1
 {
     internal class Program
     {
+        //promeni arhitekturu imam while petlji prihvatam zahteve
         static void Main(string[] args)
         {
             Server s = new Server();

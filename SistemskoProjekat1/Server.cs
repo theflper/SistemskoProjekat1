@@ -26,7 +26,7 @@ namespace SistemskoProjekat1
         private LRUCache cache = new LRUCache(40);//novi LRU cache velicine 40
         private bool isRunning = false;
         //semafor za ogranicavanje broja istovremenih obrada zahteva, da se ne bi preopteretio server
-        private SemaphoreSlim semaphore = new SemaphoreSlim(8);
+        private SemaphoreSlim semaphore = new SemaphoreSlim(10);
         //dozvoljava samo 3 radne niti da istovremeno obradjuju zahteve, ostale ce cekati dok se semafor ne oslobodi
         private ProcessingTracker tracker = new ProcessingTracker();
         //tracker prati sta se trenutno obradjuje
@@ -68,8 +68,9 @@ namespace SistemskoProjekat1
             // worker niti obradjuju zahteve iz reda, a glavna nit prihvata nove zahteve i stavlja ih u red
             ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompletionPortThreads);
             //broj radnih niti koje ThreadPool moze da koristi i broj niti koje moze da koristi za IO operacije
-            int poolSize = Math.Min(6, maxWorkerThreads);
-            //zelimo da pokrenemo 6 radnih niti, ali ako ThreadPool ne dozvoljava toliko onda pokrecemo onoliko koliko moze
+            //10ak niti stavi
+            int poolSize = Math.Min(10, maxWorkerThreads);
+            //zelimo da pokrenemo 10 radnih niti, ali ako ThreadPool ne dozvoljava toliko onda pokrecemo onoliko koliko moze
             for (int i = 0; i < poolSize; i++)
                 ThreadPool.QueueUserWorkItem(state => Worker());
             // prihvatanje zahteva dok listener radi, i dodavanje zahteva u red da ih radne niti obrade
