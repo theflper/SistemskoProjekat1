@@ -19,8 +19,6 @@ namespace SistemskoProjekat1
             public HttpListenerContext Context { get; set; }//kontekst zahteva, sadrzi sve informacije o zahtevu i odgovoru
             public string FileName { get; set; }//ime fajla koji je trazen u zahtevu
         }
-        private Queue<Request> queue = new Queue<Request>();//red zahteva koji su stigli na server, ali nisu jos obradjeni
-        private object queueLock = new object();//objekat za sinhronizaciju pristupa redu zahteva
         //keš za cuvanje sadrzaja fajlova koji su vec ucitani, da se ne bi svaki put ucitavali sa diska
         //string je ime fajla, a byte[] je sadrzaj fajla
         private LRUCache cache = new LRUCache(40);//novi LRU cache velicine 40
@@ -70,9 +68,6 @@ namespace SistemskoProjekat1
             //broj radnih niti koje ThreadPool moze da koristi i broj niti koje moze da koristi za IO operacije
             //10ak niti stavi
             int poolSize = Math.Min(10, maxWorkerThreads);
-            //zelimo da pokrenemo 10 radnih niti, ali ako ThreadPool ne dozvoljava toliko onda pokrecemo onoliko koliko moze
-            for (int i = 0; i < poolSize; i++)
-                ThreadPool.QueueUserWorkItem(state => Worker());
             // prihvatanje zahteva dok listener radi, i dodavanje zahteva u red da ih radne niti obrade
             while (listener.IsListening && isRunning)
             {
@@ -85,11 +80,8 @@ namespace SistemskoProjekat1
                     string file = context.Request.Url.AbsolutePath;
                     // uzmi samo ime fajla (odbaci sve putanje)
                     file = Path.GetFileName(file);
-                    Enqueue(new Request
-                    {
-                        Context = context,
-                        FileName = file
-                    });//dodaj zahtev u red da ga radne niti obrade
+                    var req = new Request { Context = context, FileName = file };
+                    ThreadPool.QueueUserWorkItem(_ => ProcessRequest(req));
                 }
                 catch (HttpListenerException ex)
                 {
@@ -114,58 +106,25 @@ namespace SistemskoProjekat1
                 Console.WriteLine("Server je zaustavljen.");
             }
         }
-        public void Stop()//pri gasenju servera postavljamo isRunning na false da bi radne niti znale da treba da zavrse petlju i da se ugase
+        public void Stop()//pri gasenju servera postavljamo isRunning na false da bi prestali sa while petljom koja osluskuje
         {
             isRunning = false;
-            //provera da ne dodje do greske za svaki slucaj
-            if (queueLock == null) queueLock = new Object();
-            lock (queueLock)
-            {
-                Monitor.PulseAll(queueLock); // Budi SVE niti da provere isRunning i završe petlju
-            }
         }
-        private void Enqueue(Request req)
+        private void ProcessRequest(Request req)
         {
-            // Proveri da li je request uopšte validan pre nego što ga dodaš u red
-            if (req == null || req.Context == null) return;
-            if (string.IsNullOrEmpty(req.FileName))
+            try
             {
-                SendText(req, "Missing file", 400);
-                return;
-            }
-            //samo .csv dozvoljen
-            if (!req.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-            {
-                SendText(req, "Only .csv files are allowed", 400);
-                return;
-            }
-            if (queueLock == null) queueLock = new object(); // Dodatna provera da se izbegne NullReferenceException
-            lock (queueLock)//zakljucavamo pristup redu zahteva da bi dodali novi zahtev
-            {
-                queue.Enqueue(req);//dodaj zahtev u red
-                Monitor.Pulse(queueLock);
-                //obavestavamo radne niti koje cekaju na Monitor.Wait da je stigao novi zahtev
-                //i da mogu da ga obrade to je poenta Monitor.Pulse, da probudi jednu od radnih niti koje cekaju na Monitor.Wait
-            }
-        }
-        private void Worker()
-        {
-            while (isRunning)
-            {
-                Request req;
-                //zakljucavamo pristup redu zahteva da bi obradili samo jedan zahtev u jednom trenutku
-                //i da ne bi doslo do race condition-a
-                //provera da ne dodje do greske za svaki slucaj
-                if (queueLock == null) queueLock = new Object();
-                lock (queueLock)
+                if (req == null || req.Context == null)
+                    return;
+                if (string.IsNullOrEmpty(req.FileName))
                 {
-                    //ako nema zahteva, radna nit ce cekati dok ne stigne novi zahtev i ne bude obavestena da je stigao
-                    while (queue.Count == 0 && isRunning)
-                        Monitor.Wait(queueLock);//blokitamo radnu nit dok ne stigne novi zahtev i ne bude obavestena da je stigao
-                    if (!isRunning) break; // Ako smo se probudili jer se server gasi, izađi
-                    //kada stigne zahtev, radna nit ce ga uzeti iz reda i obraditi
-                    //uvek se obradjuje prvi zahtev koji je stigao (FIFO)
-                    req = queue.Dequeue();
+                    SendText(req, "Missing file", 400);
+                    return;
+                }
+                if (!req.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                {
+                    SendText(req, "Only .csv files are allowed", 400);
+                    return;
                 }
                 //kad smo izvukli zahtev iz reda sad mozemo da oslobodimo lock na redu
                 //i da obradjujemo zahtev bez blokiranja drugih radnih niti koje mogu da prihvate nove zahteve
@@ -181,6 +140,10 @@ namespace SistemskoProjekat1
                     semaphore.Release();//oslobadjamo semafor nakon obrade zahteva
                     // da bi druge radne niti mogle da obradjuju nove zahteve
                 }
+            }
+            catch (Exception ex)
+            {
+                SendText(req, "Error: " + ex.Message, 500);
             }
         }
         private void HandleRequest(Request req)

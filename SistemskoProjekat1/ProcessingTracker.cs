@@ -17,14 +17,12 @@ namespace SistemskoProjekat1
         }
 
         private readonly Dictionary<string, Entry> map = new Dictionary<string, Entry>();
-        private object globalLock = new object();
+        private static readonly object globalLock = new object();
         // Ako neko već obrađuje key onda čekamo da taj neko obradi.
         // Ako ne nit koja je skontala da niko ne radi obradi zahtev.
         public bool WaitOrTake(string key)
         {
             Entry entry;
-            //provera da ne dodje do greske za svaki slucaj
-            if (globalLock == null) globalLock = new Object();
             lock (globalLock)
             {
                 if (!map.TryGetValue(key, out entry))
@@ -53,7 +51,6 @@ namespace SistemskoProjekat1
         {
             Entry entry;
             //provera da ne dodje do greske za svaki slucaj
-            if (globalLock == null) globalLock = new Object();
             lock (globalLock)
             {
                 //nanbavi iz dictionary
