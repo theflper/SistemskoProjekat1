@@ -12,11 +12,14 @@ namespace SistemskoProjekat1
     internal class Program
     {
         //promeni arhitekturu imam while petlji prihvatam zahteve
+        //nit za start ne iz thread pool-a
         static void Main(string[] args)
         {
             Server s = new Server();
             //da ne bi blokirali unos sa Strart jer on ima blokirjuce funkcije u sebi
-            ThreadPool.QueueUserWorkItem(_ => s.Start());
+            Thread t=new Thread(() => s.Start());//nova nit za server
+            t.IsBackground = true;//background je da se gasi kad se gasi main nit
+            t.Start();//start servera u novoj niti
             string str;
             while (true)
             {
