@@ -16,7 +16,9 @@ namespace SistemskoProjekat1
         {
             Server s = new Server();
             //da ne bi blokirali unos sa Strart jer on ima blokirjuce funkcije u sebi
-            ThreadPool.QueueUserWorkItem(_ => s.Start());
+            Thread t =new Thread(() => s.Start());
+            t.IsBackground = true;
+            t.Start();
             string str;
             while (true)
             {
